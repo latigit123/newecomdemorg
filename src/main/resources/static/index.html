@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Azure E‑Commerce Sample</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; }
+    header { display:flex; justify-content:space-between; align-items:center; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap:16px; margin-top:16px;}
+    .card { border:1px solid #eee; border-radius:12px; padding:12px; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+    button { padding:8px 12px; border-radius:8px; border:1px solid #ddd; cursor:pointer;}
+    input, select { padding:8px; border-radius:8px; border:1px solid #ddd; width:100%;}
+    .muted { color:#666; font-size:12px;}
+    footer { margin-top:32px; color:#666; font-size:12px;}
+  </style>
+</head>
+<body>
+  <header>
+    <h2>Azure E‑Commerce Sample</h2>
+    <div class="muted">Web App + SQL + Blob + Functions + Logic App</div>
+  </header>
+
+  <section>
+    <h3>Products</h3>
+    <div id="products" class="grid"></div>
+  </section>
+
+  <section>
+    <h3>Place Order</h3>
+    <div class="card">
+      <label>Your name</label>
+      <input id="customerName" placeholder="John Doe">
+      <label>Product</label>
+      <select id="product"></select>
+      <label>Quantity</label>
+      <input id="qty" type="number" min="1" value="1">
+      <button onclick="placeOrder()">Place Order</button>
+      <div id="msg" class="muted"></div>
+    </div>
+  </section>
+
+  <section>
+    <h3>Upload Product Image (to Blob)</h3>
+    <div class="card">
+      <input id="file" type="file" />
+      <input id="fileName" placeholder="image name (e.g., p1.jpg)">
+      <button onclick="upload()">Upload</button>
+      <div id="uploadMsg" class="muted"></div>
+    </div>
+  </section>
+
+  <footer>
+    Sample app for Azure learning. Replace settings in Application Settings in the Web App.
+  </footer>
+
+<script>
+async function loadProducts(){
+  const res = await fetch('/api/products');
+  const products = await res.json();
+  const list = document.getElementById('products');
+  const select = document.getElementById('product');
+  list.innerHTML = '';
+  select.innerHTML = '';
+  products.forEach(p => {
+    const card = document.createElement('div');
+    card.className='card';
+    card.innerHTML = '<h4>'+p.name+'</h4><div class="muted">₹'+p.price+'</div><div class="muted">SKU: '+p.sku+'</div>';
+    list.appendChild(card);
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name + ' - ₹' + p.price;
+    select.appendChild(opt);
+  });
+}
+
+async function placeOrder(){
+  const name = document.getElementById('customerName').value;
+  const productId = document.getElementById('product').value;
+  const qty = parseInt(document.getElementById('qty').value || '1', 10);
+  const res = await fetch('/api/orders', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({customerName:name, productId, quantity:qty})});
+  const data = await res.json();
+  document.getElementById('msg').textContent = data.message || JSON.stringify(data);
+}
+
+async function upload(){
+  const f = document.getElementById('file').files[0];
+  const name = document.getElementById('fileName').value || f.name;
+  const buf = await f.arrayBuffer();
+  const res = await fetch('/api/images/upload/'+encodeURIComponent(name), {method:'PUT', body: buf});
+  const data = await res.json();
+  document.getElementById('uploadMsg').textContent = data.url ? ('Uploaded to: '+data.url) : JSON.stringify(data);
+}
+
+loadProducts();
+</script>
+</body>
+</html>
